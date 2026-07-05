@@ -1,0 +1,4 @@
+* text=auto
+*.cs text working-tree-encoding=UTF-8
+*.xaml text working-tree-encoding=UTF-8
+*.md text working-tree-encoding=UTF-8

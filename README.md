@@ -1,21 +1,23 @@
 ﻿# YtDlp Downloader
 
-A Windows WPF desktop video downloader powered by yt-dlp.
+基于 `yt-dlp` 的 Windows 桌面视频下载工具。
 
-YtDlp Downloader is a simple Windows desktop tool for parsing video links, choosing download formats, downloading media, and merging audio/video streams through ffmpeg.
+YtDlp Downloader 是一个使用 .NET 8 + WPF 开发的桌面应用，目标是让普通用户可以通过图形界面解析视频链接、选择下载格式、查看下载进度，并通过 `ffmpeg` 自动合并音视频。
 
-## Features
+English: A Windows WPF desktop video downloader powered by yt-dlp.
 
-- Parse video URL metadata with yt-dlp
-- Show title, author/channel, duration, thumbnail, and source URL
-- Simple download options: best quality, 1080p, 720p, single-file MP4, audio only
-- Advanced format list with `format_id`, codecs, resolution, FPS, and size
-- Download progress, speed, ETA, and current stage display
-- Open downloaded file or containing folder after completion
-- Download settings for cookies, proxy, subtitles, thumbnail, file conflict policy, rate limit, retries, and concurrent fragments
-- Component check, missing component repair, and yt-dlp core update
+## 功能特性
 
-## Tech Stack
+- 输入视频 URL 并解析媒体信息
+- 展示标题、作者/频道、时长、缩略图和来源链接
+- 简单下载选项：最佳画质、1080p、720p、单文件 MP4、仅音频
+- 高级格式列表：`format_id`、编码、清晰度、FPS、文件大小等
+- 下载进度、速度、ETA 和当前阶段显示
+- 下载完成后打开文件或所在目录
+- 下载设置：cookies、代理、字幕、封面、文件冲突策略、限速、重试次数、并发分片数
+- 组件检查、缺失组件修复、yt-dlp 下载核心更新
+
+## 技术栈
 
 - .NET 8
 - WPF
@@ -23,11 +25,11 @@ YtDlp Downloader is a simple Windows desktop tool for parsing video links, choos
 - yt-dlp
 - ffmpeg
 
-## Required Components
+## 必备组件
 
-The app can use tools from its local `tools` folder or from the system `PATH`.
+应用可以使用本地 `tools` 目录中的组件，也可以使用系统 `PATH` 中已经安装的组件。
 
-Recommended local layout:
+推荐本地结构：
 
 ```text
 tools/
@@ -36,37 +38,69 @@ tools/
   deno.exe
 ```
 
-`ffmpeg.exe` is required for merging separated audio/video streams. `deno.exe` or `node.exe` can help yt-dlp handle some YouTube extraction cases.
+说明：
 
-The app provides:
+- `yt-dlp.exe`：下载核心，用于解析和下载视频
+- `ffmpeg.exe`：视频合并组件，高清音视频分离格式通常需要它
+- `deno.exe` / `node.exe`：兼容组件，可帮助 yt-dlp 处理部分 YouTube 提取逻辑
 
-- `修复缺失`: download missing components into `tools`
-- `更新核心`: update `yt-dlp.exe`
+应用内提供：
 
-## Build
+- `修复缺失`：自动下载缺失组件到 `tools` 目录
+- `更新核心`：更新 `yt-dlp.exe`
+
+## 构建
 
 ```powershell
 dotnet build
 ```
 
-## Publish
+## 发布打包
 
-Portable folder publish:
+推荐先使用便携文件夹发布方式：
 
 ```powershell
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
 ```
 
-Output folder:
+发布输出目录：
 
 ```text
 bin/Release/net8.0-windows/win-x64/publish/
 ```
 
-For a first release, distribute the whole publish folder as a zip package.
+把整个 `publish` 文件夹压缩成 zip，例如：
 
-## Notes
+```text
+YtDlpDownloader-v0.1.0-win-x64.zip
+```
 
-This project is a graphical wrapper around yt-dlp and ffmpeg. Please respect copyright laws and the terms of service of supported websites.
+## 发布包放在哪里
 
-yt-dlp, ffmpeg, and Deno are third-party projects with their own licenses.
+发布压缩包不建议提交到源码仓库。
+
+推荐流程：
+
+1. 本地生成 zip 包
+2. 到 GitHub 仓库页面打开 `Releases`
+3. 点击 `Draft a new release`
+4. 新建版本号，例如 `v0.1.0`
+5. 把 zip 包作为 Release Asset 上传
+
+本地可以临时放在：
+
+```text
+releases/YtDlpDownloader-v0.1.0-win-x64.zip
+```
+
+`releases/` 已在 `.gitignore` 中忽略，不会被提交到 GitHub 源码仓库。
+
+## 注意事项
+
+本项目是 `yt-dlp` 和 `ffmpeg` 的图形界面封装。请遵守相关网站的服务条款和当地版权法律。
+
+`yt-dlp`、`ffmpeg`、`Deno` 是第三方项目，分别遵循各自的许可证。
+
+## English Summary
+
+YtDlp Downloader is a Windows WPF desktop app powered by yt-dlp. It supports video metadata parsing, simple and advanced format selection, download progress display, ffmpeg merging, and component repair/update.

@@ -6,7 +6,9 @@ obj/
 publish/
 releases/
 *.zip
+*.dmg
 *.log
+diagnose-parse-speed.sh
 
 tools/*.exe
 tools/*.zip

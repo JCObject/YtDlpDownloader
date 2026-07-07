@@ -3,6 +3,7 @@ namespace YtDlpDownloader.Models;
 public sealed class DownloadOptions
 {
     public string MergeOutputFormat { get; init; } = "mp4";
+    public string? CookiesSource { get; init; }
     public string? CookiesPath { get; init; }
     public string? Proxy { get; init; }
     public bool DownloadSubtitles { get; init; }

@@ -74,7 +74,15 @@ public sealed partial class DownloadService
             arguments.Add(options.MergeOutputFormat);
         }
 
-        if (!string.IsNullOrWhiteSpace(options.CookiesPath) && File.Exists(options.CookiesPath))
+        var browser = BrowserCookiesSource(options.CookiesSource);
+        if (!string.IsNullOrWhiteSpace(browser))
+        {
+            arguments.Add("--cookies-from-browser");
+            arguments.Add(browser);
+        }
+        else if (string.Equals(options.CookiesSource, "cookies.txt", StringComparison.OrdinalIgnoreCase) &&
+                 !string.IsNullOrWhiteSpace(options.CookiesPath) &&
+                 File.Exists(options.CookiesPath))
         {
             arguments.Add("--cookies");
             arguments.Add(options.CookiesPath);
@@ -128,6 +136,16 @@ public sealed partial class DownloadService
         }
     }
 
+    private static string BrowserCookiesSource(string? cookiesSource)
+    {
+        return cookiesSource switch
+        {
+            var value when string.Equals(value, "Chrome", StringComparison.OrdinalIgnoreCase) => "chrome",
+            var value when string.Equals(value, "Edge", StringComparison.OrdinalIgnoreCase) => "edge",
+            _ => ""
+        };
+    }
+
     private static IEnumerable<string> SplitExtraArguments(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -159,7 +177,7 @@ public sealed partial class DownloadService
         if (error.Contains("[BiliBili]", StringComparison.OrdinalIgnoreCase) &&
             error.Contains("HTTP Error 412", StringComparison.OrdinalIgnoreCase))
         {
-            return "下载失败：B站拒绝了请求（412）。请更新 yt-dlp，或在下载设置里选择 cookies.txt 后重试。\n\n" + error.Trim();
+            return "下载失败：B站拒绝了请求（412）。请先更新 yt-dlp；如果仍失败，在下载设置里把 cookies 来源改为 Chrome / Edge，或选择 cookies.txt 后重试。\n\n" + error.Trim();
         }
 
         if (error.Contains("HTTP Error 403", StringComparison.OrdinalIgnoreCase))

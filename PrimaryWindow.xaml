@@ -193,32 +193,35 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="合并格式" />
                                 <ComboBox Grid.Row="0" Grid.Column="1" Width="160" HorizontalAlignment="Left" ItemsSource="{Binding MergeOutputFormats}" SelectedItem="{Binding MergeOutputFormat}" ToolTip="mp4 兼容性最好；mkv 更包容；auto 交给 yt-dlp 决定。" />
-                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="cookies" />
-                                <TextBox Grid.Row="1" Grid.Column="1" Margin="0,8,0,0" Text="{Binding CookiesPath, UpdateSourceTrigger=PropertyChanged}" ToolTip="遇到登录、年龄限制、403 或 B站 412 时，选择从浏览器导出的 cookies.txt。" />
-                                <Button Grid.Row="1" Grid.Column="2" Margin="8,8,0,0" Command="{Binding BrowseCookiesCommand}" Content="选择" />
-                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="代理" />
-                                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding Proxy, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 http://127.0.0.1:7890；能直接访问视频网站就留空。" />
-                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,10,0,0" Text="附加内容" />
-                                <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="cookies 来源" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" Width="180" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding CookieSources}" SelectedItem="{Binding CookiesSource}" ToolTip="B站 412、YouTube 登录验证时，推荐先选择 Chrome 或 Edge。浏览器读取失败时再选择 cookies.txt 文件。" />
+                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="cookies 文件" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Margin="0,8,0,0" Text="{Binding CookiesPath, UpdateSourceTrigger=PropertyChanged}" ToolTip="仅 cookies 来源选择 cookies.txt 时使用。可用 Get cookies.txt LOCALLY 从浏览器导出。" />
+                                <Button Grid.Row="2" Grid.Column="2" Margin="8,8,0,0" Command="{Binding BrowseCookiesCommand}" Content="选择" />
+                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="代理" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding Proxy, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 http://127.0.0.1:7890；能直接访问视频网站就留空。" />
+                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,10,0,0" Text="附加内容" />
+                                <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
                                     <CheckBox IsChecked="{Binding DownloadSubtitles}" Content="字幕文件" VerticalAlignment="Center" ToolTip="下载作者上传的字幕，通常会生成额外字幕文件。" />
                                     <CheckBox IsChecked="{Binding DownloadAutoSubtitles}" Content="自动字幕" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="下载自动生成字幕，可能会生成额外字幕文件。" />
                                     <CheckBox IsChecked="{Binding DownloadThumbnail}" Content="封面图片" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="额外下载视频封面图片。" />
                                 </StackPanel>
-                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="字幕语言" />
-                                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding SubtitleLanguages, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 zh-Hans,zh-CN,en；填 all 表示所有字幕。" />
-                                <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="文件冲突" />
-                                <ComboBox Grid.Row="5" Grid.Column="1" Width="180" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding FileConflictPolicies}" SelectedItem="{Binding SelectedFileConflictPolicy}" ToolTip="推荐自动改名，避免覆盖已有文件。" />
-                                <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="限速" />
-                                <TextBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding RateLimit, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 2M、500K；留空表示不限速。" />
-                                <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="重试次数" />
-                                <TextBox Grid.Row="7" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding RetryCount, UpdateSourceTrigger=PropertyChanged}" ToolTip="网络失败时自动重试次数。" />
-                                <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="并发分片数" />
-                                <TextBox Grid.Row="8" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding ConcurrentFragments, UpdateSourceTrigger=PropertyChanged}" ToolTip="默认 5。提高部分分片视频速度；网络不稳定时调低，范围 1-16。" />
-                                <TextBlock Grid.Row="9" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Top" Text="高级参数" />
-                                <TextBox Grid.Row="9" Grid.Column="1" Grid.ColumnSpan="2" MinHeight="72" Margin="0,8,0,0" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Text="{Binding ExtraArgumentsText, UpdateSourceTrigger=PropertyChanged}" ToolTip="手动追加 yt-dlp 参数。普通用户建议留空。" />
+                                <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="字幕语言" />
+                                <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding SubtitleLanguages, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 zh-Hans,zh-CN,en；填 all 表示所有字幕。" />
+                                <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="文件冲突" />
+                                <ComboBox Grid.Row="6" Grid.Column="1" Width="180" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding FileConflictPolicies}" SelectedItem="{Binding SelectedFileConflictPolicy}" ToolTip="推荐自动改名，避免覆盖已有文件。" />
+                                <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="限速" />
+                                <TextBox Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding RateLimit, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 2M、500K；留空表示不限速。" />
+                                <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="重试次数" />
+                                <TextBox Grid.Row="8" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding RetryCount, UpdateSourceTrigger=PropertyChanged}" ToolTip="网络失败时自动重试次数。" />
+                                <TextBlock Grid.Row="9" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="并发分片数" />
+                                <TextBox Grid.Row="9" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding ConcurrentFragments, UpdateSourceTrigger=PropertyChanged}" ToolTip="默认 5。提高部分分片视频速度；网络不稳定时调低，范围 1-16。" />
+                                <TextBlock Grid.Row="10" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Top" Text="高级参数" />
+                                <TextBox Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" MinHeight="72" Margin="0,8,0,0" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Text="{Binding ExtraArgumentsText, UpdateSourceTrigger=PropertyChanged}" ToolTip="手动追加 yt-dlp 参数。普通用户建议留空。" />
                             </Grid>
                         </ScrollViewer>
                     </TabItem>

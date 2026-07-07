@@ -43,6 +43,7 @@ public sealed class PrimaryViewModel : ObservableObject
     private MediaFormat? _selectedAdvancedFormat;
     private string? _lastOutputFile;
     private string _mergeOutputFormat = "mp4";
+    private string _cookiesSource = "不使用";
     private string _cookiesPath = "";
     private string _proxy = "";
     private bool _downloadSubtitles;
@@ -70,6 +71,7 @@ public sealed class PrimaryViewModel : ObservableObject
             ? settingsService.DefaultDownloadDirectory
             : userSettings.SaveDirectory;
         _mergeOutputFormat = userSettings.MergeOutputFormat;
+        _cookiesSource = string.IsNullOrWhiteSpace(userSettings.CookiesSource) ? "不使用" : userSettings.CookiesSource;
         _cookiesPath = userSettings.CookiesPath;
         _proxy = userSettings.Proxy;
         _downloadSubtitles = userSettings.DownloadSubtitles;
@@ -84,6 +86,7 @@ public sealed class PrimaryViewModel : ObservableObject
         _componentStatus = _toolPathService.GetComponentSummary();
 
         MergeOutputFormats = ["mp4", "mkv", "auto"];
+        CookieSources = ["不使用", "Chrome", "Edge", "cookies.txt"];
         FileConflictPolicies =
         [
             FileConflictPolicyOption.Rename,
@@ -172,6 +175,7 @@ public sealed class PrimaryViewModel : ObservableObject
     public MediaFormat? SelectedSimpleFormat { get => _selectedSimpleFormat; set { if (SetProperty(ref _selectedSimpleFormat, value)) { UpdateActionSummary(); RaiseCommandStates(); } } }
     public MediaFormat? SelectedAdvancedFormat { get => _selectedAdvancedFormat; set { if (SetProperty(ref _selectedAdvancedFormat, value)) { UpdateActionSummary(); RaiseCommandStates(); } } }
     public string MergeOutputFormat { get => _mergeOutputFormat; set { if (SetProperty(ref _mergeOutputFormat, value)) { SaveSettings(); UpdateActionSummary(); } } }
+    public string CookiesSource { get => _cookiesSource; set { if (SetProperty(ref _cookiesSource, value)) SaveSettings(); } }
     public string CookiesPath { get => _cookiesPath; set { if (SetProperty(ref _cookiesPath, value)) SaveSettings(); } }
     public string Proxy { get => _proxy; set { if (SetProperty(ref _proxy, value)) SaveSettings(); } }
     public bool DownloadSubtitles { get => _downloadSubtitles; set { if (SetProperty(ref _downloadSubtitles, value)) SaveSettings(); } }
@@ -187,6 +191,7 @@ public sealed class PrimaryViewModel : ObservableObject
     public ObservableCollection<MediaFormat> SimpleFormats { get; } = [];
     public ObservableCollection<MediaFormat> AdvancedFormats { get; } = [];
     public ObservableCollection<string> MergeOutputFormats { get; }
+    public ObservableCollection<string> CookieSources { get; }
     public ObservableCollection<FileConflictPolicyOption> FileConflictPolicies { get; }
     public DownloadTaskViewModel CurrentTask { get; } = new();
 
@@ -230,7 +235,13 @@ public sealed class PrimaryViewModel : ObservableObject
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(90));
-            var videoInfo = await _ytDlpService.GetVideoInfoAsync(normalizedUrl, AddLog, timeout.Token);
+            var videoInfo = await _ytDlpService.GetVideoInfoAsync(
+                normalizedUrl,
+                CookiesSource,
+                CookiesPath,
+                Proxy,
+                AddLog,
+                timeout.Token);
             Title = videoInfo.Title;
             Author = videoInfo.Author;
             Duration = videoInfo.Duration is null ? "未知时长" : videoInfo.Duration.Value.ToString(@"hh\:mm\:ss");
@@ -358,6 +369,7 @@ public sealed class PrimaryViewModel : ObservableObject
         return new DownloadOptions
         {
             MergeOutputFormat = MergeOutputFormat,
+            CookiesSource = CookiesSource,
             CookiesPath = string.IsNullOrWhiteSpace(CookiesPath) ? null : CookiesPath,
             Proxy = string.IsNullOrWhiteSpace(Proxy) ? null : Proxy,
             DownloadSubtitles = DownloadSubtitles,
@@ -378,6 +390,7 @@ public sealed class PrimaryViewModel : ObservableObject
         {
             SaveDirectory = SaveDirectory,
             MergeOutputFormat = MergeOutputFormat,
+            CookiesSource = CookiesSource,
             CookiesPath = CookiesPath,
             Proxy = Proxy,
             DownloadSubtitles = DownloadSubtitles,
@@ -426,7 +439,11 @@ public sealed class PrimaryViewModel : ObservableObject
             Filter = "Cookies 文件 (*.txt)|*.txt|所有文件 (*.*)|*.*"
         };
 
-        if (dialog.ShowDialog() == true) CookiesPath = dialog.FileName;
+        if (dialog.ShowDialog() == true)
+        {
+            CookiesPath = dialog.FileName;
+            CookiesSource = "cookies.txt";
+        }
     }
 
     private void OpenFolder()

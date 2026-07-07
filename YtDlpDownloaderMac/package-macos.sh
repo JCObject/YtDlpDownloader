@@ -148,8 +148,7 @@ end tell
 APPLESCRIPT
 
 if [ ! -f "$MOUNT_DIR/.DS_Store" ]; then
-  echo "Finder did not create .DS_Store for the DMG layout." >&2
-  exit 1
+  echo "Finder did not create .DS_Store for the DMG layout; continuing with the default Finder layout." >&2
 fi
 
 bless --folder "$MOUNT_DIR" --openfolder "$MOUNT_DIR" >/dev/null 2>&1 || true

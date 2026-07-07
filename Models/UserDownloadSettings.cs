@@ -4,6 +4,7 @@ public sealed class UserDownloadSettings
 {
     public string SaveDirectory { get; init; } = "";
     public string MergeOutputFormat { get; init; } = "mp4";
+    public string CookiesSource { get; init; } = "不使用";
     public string CookiesPath { get; init; } = "";
     public string Proxy { get; init; } = "";
     public bool DownloadSubtitles { get; init; }

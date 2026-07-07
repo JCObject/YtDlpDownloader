@@ -200,25 +200,27 @@ private struct ComponentStatusRow: View {
 
 private struct ThumbnailView: View {
     let url: URL?
+    @State private var image: NSImage?
+    @State private var isLoading = false
 
     var body: some View {
         RoundedRectangle(cornerRadius: 8)
             .fill(Color(nsColor: .quaternaryLabelColor))
             .overlay {
                 if let url {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView()
-                        case .success(let image):
-                            image
+                    Group {
+                        if let image {
+                            Image(nsImage: image)
                                 .resizable()
                                 .scaledToFill()
-                        case .failure:
-                            placeholder
-                        @unknown default:
+                        } else if isLoading {
+                            ProgressView()
+                        } else {
                             placeholder
                         }
+                    }
+                    .task(id: url) {
+                        await loadImage(from: url)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 } else {
@@ -226,6 +228,32 @@ private struct ThumbnailView: View {
                 }
             }
             .clipped()
+    }
+
+    @MainActor
+    private func loadImage(from url: URL) async {
+        image = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            var request = URLRequest(url: url)
+            request.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+            if url.host?.contains("hdslb.com") == true || url.host?.contains("bilibili.com") == true {
+                request.setValue("https://www.bilibili.com/", forHTTPHeaderField: "Referer")
+            }
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200..<300).contains(httpResponse.statusCode),
+                  let loadedImage = NSImage(data: data) else {
+                return
+            }
+
+            image = loadedImage
+        } catch {
+            image = nil
+        }
     }
 
     private var placeholder: some View {

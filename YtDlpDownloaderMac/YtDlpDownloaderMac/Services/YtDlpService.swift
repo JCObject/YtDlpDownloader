@@ -167,7 +167,7 @@ struct YtDlpService {
             title: title?.isEmpty == false ? title! : "未命名视频",
             author: raw.uploader ?? raw.channel ?? "",
             duration: Self.formatDuration(raw.duration),
-            thumbnailURL: raw.thumbnail.flatMap(URL.init(string:)),
+            thumbnailURL: Self.thumbnailURL(from: raw),
             sourceURL: raw.webpageURL ?? url.absoluteString
         )
 
@@ -176,6 +176,38 @@ struct YtDlpService {
             advancedOptions: options,
             suggestedFileName: Self.sanitizeFileName(title ?? "video")
         )
+    }
+
+    private static func thumbnailURL(from raw: RawYtDlpVideoInfo) -> URL? {
+        if let url = normalizedImageURL(from: raw.thumbnail) {
+            return url
+        }
+
+        return raw.thumbnails?
+            .reversed()
+            .compactMap { item in
+                normalizedImageURL(from: item.url)
+            }
+            .first
+    }
+
+    private static func normalizedImageURL(from value: String?) -> URL? {
+        guard var text = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else {
+            return nil
+        }
+
+        if text.hasPrefix("//") {
+            text = "https:" + text
+        }
+
+        if text.lowercased().hasPrefix("http://"),
+           text.localizedCaseInsensitiveContains("hdslb.com") ||
+           text.localizedCaseInsensitiveContains("bilibili.com") {
+            text = "https://" + String(text.dropFirst("http://".count))
+        }
+
+        return URL(string: text)
     }
 
     private static func buildAdvancedOptions(from formats: [RawYtDlpFormat]) -> [DownloadOption] {
@@ -321,7 +353,7 @@ struct YtDlpService {
         }
 
         if output.contains("HTTP Error 412") || output.contains("Precondition Failed") {
-            return "B站拒绝了请求（412）。请先更新 yt-dlp；如果仍失败，在下载设置里选择 cookies.txt 后重试。\n\n\(output)"
+            return "B站拒绝了请求（412）。请先更新 yt-dlp；如果仍失败，在下载设置里把 cookies 来源改为 Chrome / Safari，或选择 cookies.txt 后重试。\n\n\(output)"
         }
 
         if output.localizedCaseInsensitiveContains("Unsupported URL") {

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Text.Json;
 using YtDlpDownloader.Infrastructure;
 using YtDlpDownloader.Models;
@@ -16,12 +17,19 @@ public sealed class YtDlpService
         _toolPathService = toolPathService;
     }
 
-    public async Task<VideoInfo> GetVideoInfoAsync(string url, Action<string>? onOutput, CancellationToken cancellationToken)
+    public async Task<VideoInfo> GetVideoInfoAsync(
+        string url,
+        string cookiesSource,
+        string cookiesPath,
+        string proxy,
+        Action<string>? onOutput,
+        CancellationToken cancellationToken)
     {
         var preparedUrl = YtDlpUrlHelper.Normalize(url);
         var arguments = new List<string> { "--no-warnings", "--no-playlist", "--dump-single-json" };
         _toolPathService.AddCommonArguments(arguments);
         YtDlpUrlHelper.AddSiteArguments(arguments, preparedUrl);
+        AddUserNetworkArguments(arguments, cookiesSource, cookiesPath, proxy);
         arguments.Add(preparedUrl);
         var result = await _processRunner.RunAsync(_toolPathService.YtDlpPath, arguments, onOutput, cancellationToken);
 
@@ -44,7 +52,7 @@ public sealed class YtDlpService
             Title = ReadString(root, "title"),
             Author = ReadString(root, "uploader", "channel", "creator"),
             Duration = ReadDouble(root, "duration") is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
-            ThumbnailUrl = ReadString(root, "thumbnail"),
+            ThumbnailUrl = ReadThumbnail(root),
             SourceUrl = ReadString(root, "webpage_url", "original_url"),
             Formats = { }
         }.WithFormats(formats);
@@ -221,7 +229,7 @@ public sealed class YtDlpService
         if (error.Contains("[BiliBili]", StringComparison.OrdinalIgnoreCase) &&
             error.Contains("HTTP Error 412", StringComparison.OrdinalIgnoreCase))
         {
-            return "解析失败：B站拒绝了请求（412）。请更新 yt-dlp，或在下载设置里选择 cookies.txt 后重试。\n\n" + error.Trim();
+            return "解析失败：B站拒绝了请求（412）。请先更新 yt-dlp；如果仍失败，在下载设置里把 cookies 来源改为 Chrome / Edge，或选择 cookies.txt 后重试。\n\n" + error.Trim();
         }
 
         return $"{prefix}: {error.Trim()}";
@@ -238,6 +246,63 @@ public sealed class YtDlpService
         }
 
         return "";
+    }
+
+    private static string ReadThumbnail(JsonElement root)
+    {
+        var thumbnail = ReadString(root, "thumbnail");
+        if (!string.IsNullOrWhiteSpace(thumbnail))
+        {
+            return thumbnail;
+        }
+
+        if (!root.TryGetProperty("thumbnails", out var thumbnails) || thumbnails.ValueKind != JsonValueKind.Array)
+        {
+            return "";
+        }
+
+        return thumbnails
+            .EnumerateArray()
+            .Select(item => ReadString(item, "url"))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .LastOrDefault() ?? "";
+    }
+
+    private static void AddUserNetworkArguments(
+        ICollection<string> arguments,
+        string cookiesSource,
+        string cookiesPath,
+        string proxy)
+    {
+        var browser = BrowserCookiesSource(cookiesSource);
+        if (!string.IsNullOrWhiteSpace(browser))
+        {
+            arguments.Add("--cookies-from-browser");
+            arguments.Add(browser);
+        }
+        else if (string.Equals(cookiesSource, "cookies.txt", StringComparison.OrdinalIgnoreCase) &&
+                 !string.IsNullOrWhiteSpace(cookiesPath) &&
+                 File.Exists(cookiesPath))
+        {
+            arguments.Add("--cookies");
+            arguments.Add(cookiesPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(proxy))
+        {
+            arguments.Add("--proxy");
+            arguments.Add(proxy);
+        }
+    }
+
+    private static string BrowserCookiesSource(string cookiesSource)
+    {
+        return cookiesSource switch
+        {
+            var value when string.Equals(value, "Chrome", StringComparison.OrdinalIgnoreCase) => "chrome",
+            var value when string.Equals(value, "Edge", StringComparison.OrdinalIgnoreCase) => "edge",
+            _ => ""
+        };
     }
 
     private static int? ReadInt(JsonElement element, string name)

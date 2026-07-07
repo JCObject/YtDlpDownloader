@@ -12,6 +12,7 @@ struct RawYtDlpVideoInfo: Decodable {
     let channel: String?
     let duration: Double?
     let thumbnail: String?
+    let thumbnails: [RawYtDlpThumbnail]?
     let webpageURL: String?
     let formats: [RawYtDlpFormat]?
 
@@ -21,9 +22,14 @@ struct RawYtDlpVideoInfo: Decodable {
         case channel
         case duration
         case thumbnail
+        case thumbnails
         case webpageURL = "webpage_url"
         case formats
     }
+}
+
+struct RawYtDlpThumbnail: Decodable {
+    let url: String?
 }
 
 struct RawYtDlpFormat: Decodable {

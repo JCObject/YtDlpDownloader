@@ -12,6 +12,14 @@ struct ComponentStatus: Identifiable {
     let kind: ComponentKind
     let path: String?
     let version: String?
+    let hasChecked: Bool
+
+    init(kind: ComponentKind, path: String?, version: String?, hasChecked: Bool = true) {
+        self.kind = kind
+        self.path = path
+        self.version = version
+        self.hasChecked = hasChecked
+    }
 
     var id: String { kind.id }
 
@@ -19,7 +27,15 @@ struct ComponentStatus: Identifiable {
         path != nil
     }
 
+    var isMissing: Bool {
+        hasChecked && !isInstalled
+    }
+
     var displayText: String {
+        guard hasChecked else {
+            return "\(kind.rawValue): 尚未检测"
+        }
+
         guard isInstalled else {
             return "\(kind.rawValue): 缺失"
         }

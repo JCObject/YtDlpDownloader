@@ -32,9 +32,9 @@ final class MainViewModel: ObservableObject {
     @Published var downloadProgress = DownloadProgress.idle
     @Published var lastDownloadedFileURL: URL?
     @Published var componentStatuses: [ComponentStatus] = [
-        ComponentStatus(kind: .ytDlp, path: nil, version: nil),
-        ComponentStatus(kind: .ffmpeg, path: nil, version: nil),
-        ComponentStatus(kind: .deno, path: nil, version: nil)
+        ComponentStatus(kind: .ytDlp, path: nil, version: nil, hasChecked: false),
+        ComponentStatus(kind: .ffmpeg, path: nil, version: nil, hasChecked: false),
+        ComponentStatus(kind: .deno, path: nil, version: nil, hasChecked: false)
     ]
     @Published var isCheckingComponents = false
     @Published var isRepairingComponents = false

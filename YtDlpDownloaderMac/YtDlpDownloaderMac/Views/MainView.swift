@@ -171,7 +171,7 @@ private struct ComponentStatusRow: View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
                 Text(status.displayText)
-                    .foregroundStyle(status.isInstalled ? Color.primary : Color.red)
+                    .foregroundStyle(status.isMissing ? Color.red : Color.primary)
                 if let path = status.path {
                     Text(path)
                         .font(.caption)
@@ -182,7 +182,7 @@ private struct ComponentStatusRow: View {
             }
         } icon: {
             Image(systemName: iconName)
-                .foregroundStyle(status.isInstalled ? .green : .orange)
+                .foregroundStyle(status.isInstalled ? .green : (status.isMissing ? .orange : .secondary))
         }
     }
 

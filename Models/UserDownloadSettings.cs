@@ -2,6 +2,7 @@ namespace YtDlpDownloader.Models;
 
 public sealed class UserDownloadSettings
 {
+    public string Language { get; init; } = "en";
     public string SaveDirectory { get; init; } = "";
     public string MergeOutputFormat { get; init; } = "mp4";
     public string CookiesSource { get; init; } = "不使用";

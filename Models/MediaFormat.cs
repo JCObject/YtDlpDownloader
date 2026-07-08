@@ -15,9 +15,11 @@ public sealed class MediaFormat
     public bool IsAudioOnly { get; init; }
     public bool RequiresFfmpeg { get; init; }
     public bool IsSimpleOption { get; init; }
+    public string KindLabel { get; init; } = "";
+    public string UnknownText { get; init; } = "未知";
 
-    public string FileSizeText => FileSizeBytes is null ? "未知" : FormatBytes(FileSizeBytes.Value);
-    public string Kind => IsAudioOnly ? "音频" : RequiresFfmpeg ? "需合并" : "单文件";
+    public string FileSizeText => FileSizeBytes is null ? UnknownText : FormatBytes(FileSizeBytes.Value);
+    public string Kind => !string.IsNullOrWhiteSpace(KindLabel) ? KindLabel : IsAudioOnly ? "音频" : RequiresFfmpeg ? "需合并" : "单文件";
 
     public string Summary
     {

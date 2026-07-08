@@ -31,19 +31,19 @@ struct ComponentStatus: Identifiable {
         hasChecked && !isInstalled
     }
 
-    var displayText: String {
+    func displayText(language: AppLanguage) -> String {
         guard hasChecked else {
-            return "\(kind.rawValue): 尚未检测"
+            return language == .english ? "\(kind.rawValue): not checked" : "\(kind.rawValue): 尚未检测"
         }
 
         guard isInstalled else {
-            return "\(kind.rawValue): 缺失"
+            return language == .english ? "\(kind.rawValue): missing" : "\(kind.rawValue): 缺失"
         }
 
         if let version, !version.isEmpty {
-            return "\(kind.rawValue): 正常  \(version)"
+            return language == .english ? "\(kind.rawValue): OK  \(version)" : "\(kind.rawValue): 正常  \(version)"
         }
 
-        return "\(kind.rawValue): 正常"
+        return language == .english ? "\(kind.rawValue): OK" : "\(kind.rawValue): 正常"
     }
 }

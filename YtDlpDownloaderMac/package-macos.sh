@@ -16,6 +16,7 @@ APP_TARGET="$DMG_ROOT/$DISPLAY_NAME.app"
 DMG_PATH="$DIST_DIR/YtDlpDownloader-macOS-universal.dmg"
 RW_DMG_PATH="$DIST_DIR/YtDlpDownloader-macOS-universal-rw.dmg"
 ZIP_PATH="$DIST_DIR/YtDlpDownloader-macOS-universal.zip"
+USE_FINDER_LAYOUT="${USE_FINDER_LAYOUT:-0}"
 
 rm -rf "$DERIVED_DATA" "$DIST_DIR"
 mkdir -p "$DMG_ROOT" "$DMG_BACKGROUND_DIR"
@@ -83,22 +84,22 @@ SWIFT
 
 /usr/bin/swift "$DMG_BACKGROUND_SWIFT" "$DMG_BACKGROUND"
 
-hdiutil create \
-  -volname "$DISPLAY_NAME" \
-  -srcfolder "$DMG_ROOT" \
-  -ov \
-  -format UDRW \
-  "$RW_DMG_PATH"
+if [ "$USE_FINDER_LAYOUT" = "1" ]; then
+  hdiutil create "$RW_DMG_PATH" \
+    -volname "$DISPLAY_NAME" \
+    -srcfolder "$DMG_ROOT" \
+    -ov \
+    -format UDRW
 
-MOUNT_DIR="/Volumes/$DISPLAY_NAME"
-hdiutil detach "$MOUNT_DIR" -quiet >/dev/null 2>&1 || true
-hdiutil attach "$RW_DMG_PATH" -mountpoint "$MOUNT_DIR" -quiet
-cleanup_mount() {
+  MOUNT_DIR="/Volumes/$DISPLAY_NAME"
   hdiutil detach "$MOUNT_DIR" -quiet >/dev/null 2>&1 || true
-}
-trap cleanup_mount EXIT
+  hdiutil attach "$RW_DMG_PATH" -mountpoint "$MOUNT_DIR" -quiet
+  cleanup_mount() {
+    hdiutil detach "$MOUNT_DIR" -quiet >/dev/null 2>&1 || true
+  }
+  trap cleanup_mount EXIT
 
-osascript <<APPLESCRIPT
+  osascript <<APPLESCRIPT
 tell application "Finder"
   set dmgFolder to POSIX file "$MOUNT_DIR" as alias
   set backgroundImage to POSIX file "$MOUNT_DIR/.background/installer-background.png" as alias
@@ -147,17 +148,24 @@ tell application "Finder"
 end tell
 APPLESCRIPT
 
-if [ ! -f "$MOUNT_DIR/.DS_Store" ]; then
-  echo "Finder did not create .DS_Store for the DMG layout; continuing with the default Finder layout." >&2
+  if [ ! -f "$MOUNT_DIR/.DS_Store" ]; then
+    echo "Finder did not create .DS_Store for the DMG layout; continuing with the default Finder layout." >&2
+  fi
+
+  bless --folder "$MOUNT_DIR" --openfolder "$MOUNT_DIR" >/dev/null 2>&1 || true
+
+  cleanup_mount
+  trap - EXIT
+
+  hdiutil convert "$RW_DMG_PATH" -format UDZO -o "$DMG_PATH" -ov
+  rm -f "$RW_DMG_PATH"
+else
+  hdiutil create "$DMG_PATH" \
+    -volname "$DISPLAY_NAME" \
+    -srcfolder "$DMG_ROOT" \
+    -ov \
+    -format UDZO
 fi
-
-bless --folder "$MOUNT_DIR" --openfolder "$MOUNT_DIR" >/dev/null 2>&1 || true
-
-cleanup_mount
-trap - EXIT
-
-hdiutil convert "$RW_DMG_PATH" -format UDZO -o "$DMG_PATH" -ov
-rm -f "$RW_DMG_PATH"
 
 ditto -c -k --keepParent "$APP_TARGET" "$ZIP_PATH"
 

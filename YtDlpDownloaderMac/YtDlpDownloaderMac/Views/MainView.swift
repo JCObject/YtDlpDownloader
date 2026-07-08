@@ -29,6 +29,16 @@ struct MainView: View {
         .task {
             await viewModel.refreshComponents()
         }
+        .alert(viewModel.text(.restartTitle), isPresented: $viewModel.isShowingLanguageRestartPrompt) {
+            Button(viewModel.text(.restartNow)) {
+                viewModel.confirmLanguageChangeAndRestart()
+            }
+            Button(viewModel.text(.cancel), role: .cancel) {
+                viewModel.cancelLanguageChange()
+            }
+        } message: {
+            Text(viewModel.text(.restartMessage))
+        }
     }
 }
 
@@ -37,17 +47,17 @@ private struct HeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("1 输入链接  ->  2 选择清晰度  ->  3 开始下载")
+            Text(viewModel.text(.headerSteps))
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
-                TextField("粘贴 YouTube、B站或其它 yt-dlp 支持的视频链接", text: $viewModel.urlText)
+                TextField(viewModel.text(.urlPlaceholder), text: $viewModel.urlText)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 15))
                     .disabled(viewModel.isParsing || viewModel.isDownloading)
 
-                Button(viewModel.isParsing ? "解析中..." : "解析") {
+                Button(viewModel.isParsing ? viewModel.text(.analyzing) : viewModel.text(.analyze)) {
                     Task {
                         await viewModel.parseVideo()
                     }
@@ -67,12 +77,12 @@ private struct SidebarView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                GroupBox("视频信息") {
+                GroupBox(viewModel.text(.videoInfo)) {
                     VStack(alignment: .leading, spacing: 12) {
                         ThumbnailView(url: viewModel.video.thumbnailURL)
                             .frame(height: 175)
 
-                        Text(viewModel.video.title)
+                        Text(viewModel.video.sourceURL.isEmpty ? viewModel.text(.noVideoTitle) : viewModel.video.title)
                             .font(.title3.weight(.semibold))
                             .lineLimit(3)
 
@@ -81,7 +91,7 @@ private struct SidebarView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        Text(viewModel.video.duration)
+                        Text(viewModel.video.sourceURL.isEmpty ? viewModel.text(.unknownDuration) : viewModel.video.duration)
                             .foregroundStyle(.secondary)
 
                         if !viewModel.video.sourceURL.isEmpty {
@@ -95,28 +105,28 @@ private struct SidebarView: View {
                     .padding(.vertical, 4)
                 }
 
-                GroupBox("组件状态") {
+                GroupBox(viewModel.text(.components)) {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(viewModel.componentStatuses) { status in
-                            ComponentStatusRow(status: status)
+                            ComponentStatusRow(viewModel: viewModel, status: status)
                         }
 
                         HStack {
-                            Button(viewModel.isCheckingComponents ? "检测中..." : "刷新") {
+                            Button(viewModel.isCheckingComponents ? viewModel.text(.checking) : viewModel.text(.refresh)) {
                                 Task {
                                     await viewModel.refreshComponents()
                                 }
                             }
                             .disabled(viewModel.isCheckingComponents || viewModel.isRepairingComponents)
 
-                            Button(viewModel.isRepairingComponents ? "修复中..." : "修复缺失") {
+                            Button(viewModel.isRepairingComponents ? viewModel.text(.repairing) : viewModel.text(.repairMissing)) {
                                 Task {
                                     await viewModel.repairMissingComponents()
                                 }
                             }
                             .disabled(!viewModel.canRepairComponents)
 
-                            Button("更新核心") {
+                            Button(viewModel.text(.updateCore)) {
                                 Task {
                                     await viewModel.updateYtDlpCore()
                                 }
@@ -128,28 +138,28 @@ private struct SidebarView: View {
                     .padding(.vertical, 4)
                 }
 
-                GroupBox("保存设置") {
+                GroupBox(viewModel.text(.save)) {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("保存目录")
+                            Text(viewModel.text(.saveTo))
                                 .frame(width: 62, alignment: .leading)
                             TextField("", text: $viewModel.saveDirectory)
-                            Button("选择") {
+                            Button(viewModel.text(.browse)) {
                                 viewModel.chooseSaveDirectory()
                             }
                         }
 
                         HStack {
-                            Text("文件名")
+                            Text(viewModel.text(.fileName))
                                 .frame(width: 62, alignment: .leading)
-                            TextField("解析后自动填充，可手动修改", text: $viewModel.outputFileName)
+                            TextField(viewModel.text(.fileNamePlaceholder), text: $viewModel.outputFileName)
                         }
 
                         HStack {
-                            Button("打开目录") {
+                            Button(viewModel.text(.openFolder)) {
                                 viewModel.openSaveDirectory()
                             }
-                            Button("打开文件") {
+                            Button(viewModel.text(.openFile)) {
                                 viewModel.openDownloadedFile()
                             }
                             .disabled(viewModel.lastDownloadedFileURL == nil)
@@ -165,12 +175,13 @@ private struct SidebarView: View {
 }
 
 private struct ComponentStatusRow: View {
+    @ObservedObject var viewModel: MainViewModel
     let status: ComponentStatus
 
     var body: some View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
-                Text(status.displayText)
+                Text(status.displayText(language: viewModel.language))
                     .foregroundStyle(status.isMissing ? Color.red : Color.primary)
                 if let path = status.path {
                     Text(path)
@@ -268,12 +279,12 @@ private struct OptionsPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("输入视频链接后，点击解析即可看到推荐下载选项。高级格式适合了解 format_id 的用户。")
+            Text(viewModel.text(.optionsIntro))
                 .foregroundStyle(.secondary)
 
             Picker("", selection: $viewModel.selectedTab) {
                 ForEach(DownloadTab.allCases) { tab in
-                    Text(tab.rawValue).tag(tab)
+                    Text(viewModel.tabTitle(tab)).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
@@ -284,22 +295,22 @@ private struct OptionsPanelView: View {
                 case .simple:
                     if viewModel.simpleOptions.isEmpty {
                         EmptyOptionsView(
-                            title: "等待解析",
-                            message: "粘贴视频链接并点击解析后，这里会显示最佳画质、1080p、720p 和仅音频等推荐选项。"
+                            title: viewModel.text(.emptySimpleTitle),
+                            message: viewModel.text(.emptySimpleMessage)
                         )
                     } else {
-                        OptionTableView(options: viewModel.simpleOptions, selectedOptionID: $viewModel.selectedOptionID) { option in
+                        OptionTableView(viewModel: viewModel, options: viewModel.simpleOptions, selectedOptionID: $viewModel.selectedOptionID) { option in
                             viewModel.select(option)
                         }
                     }
                 case .advanced:
                     if viewModel.advancedOptions.isEmpty {
                         EmptyOptionsView(
-                            title: "暂无高级格式",
-                            message: "解析成功后会显示 format_id、编码、清晰度和文件大小。普通下载建议优先使用简单下载。"
+                            title: viewModel.text(.emptyAdvancedTitle),
+                            message: viewModel.text(.emptyAdvancedMessage)
                         )
                     } else {
-                        AdvancedFormatTableView(options: viewModel.advancedOptions, selectedOptionID: $viewModel.selectedOptionID) { option in
+                        AdvancedFormatTableView(viewModel: viewModel, options: viewModel.advancedOptions, selectedOptionID: $viewModel.selectedOptionID) { option in
                             viewModel.select(option)
                         }
                     }
@@ -334,26 +345,27 @@ private struct EmptyOptionsView: View {
 }
 
 private struct OptionTableView: View {
+    @ObservedObject var viewModel: MainViewModel
     let options: [DownloadOption]
     @Binding var selectedOptionID: String?
     let onSelect: (DownloadOption) -> Void
 
     var body: some View {
         Table(options, selection: $selectedOptionID) {
-            TableColumn("选项") { option in
-                Text(option.title)
+            TableColumn(viewModel.text(.columnOption)) { option in
+                Text(viewModel.optionTitle(option))
             }
-            TableColumn("类型") { option in
-                Text(option.kind.rawValue)
+            TableColumn(viewModel.text(.columnType)) { option in
+                Text(viewModel.optionKindText(option.kind))
             }
-            TableColumn("清晰度") { option in
-                Text(option.resolution)
+            TableColumn(viewModel.text(.columnQuality)) { option in
+                Text(viewModel.optionResolution(option))
             }
-            TableColumn("格式") { option in
-                Text(option.container)
+            TableColumn(viewModel.text(.columnFormat)) { option in
+                Text(viewModel.optionContainer(option))
             }
-            TableColumn("说明") { option in
-                Text(option.note)
+            TableColumn(viewModel.text(.columnDescription)) { option in
+                Text(viewModel.optionNote(option))
                     .lineLimit(2)
             }
         }
@@ -367,6 +379,7 @@ private struct OptionTableView: View {
 }
 
 private struct AdvancedFormatTableView: View {
+    @ObservedObject var viewModel: MainViewModel
     let options: [DownloadOption]
     @Binding var selectedOptionID: String?
     let onSelect: (DownloadOption) -> Void
@@ -376,28 +389,28 @@ private struct AdvancedFormatTableView: View {
             TableColumn("format_id") { option in
                 Text(option.id)
             }
-            TableColumn("清晰度") { option in
+            TableColumn(viewModel.text(.columnQuality)) { option in
                 Text(option.resolution)
             }
-            TableColumn("类型") { option in
-                Text(option.kind.rawValue)
+            TableColumn(viewModel.text(.columnType)) { option in
+                Text(viewModel.optionKindText(option.kind))
             }
-            TableColumn("格式") { option in
+            TableColumn(viewModel.text(.columnFormat)) { option in
                 Text(option.container)
             }
-            TableColumn("视频编码") { option in
+            TableColumn(viewModel.text(.columnVideoCodec)) { option in
                 Text(option.videoCodec)
             }
-            TableColumn("音频编码") { option in
+            TableColumn(viewModel.text(.columnAudioCodec)) { option in
                 Text(option.audioCodec)
             }
             TableColumn("FPS") { option in
                 Text(option.fps)
             }
-            TableColumn("大小") { option in
+            TableColumn(viewModel.text(.columnSize)) { option in
                 Text(option.fileSize)
             }
-            TableColumn("表达式") { option in
+            TableColumn(viewModel.text(.columnExpression)) { option in
                 Text(option.expression)
             }
         }
@@ -417,7 +430,21 @@ private struct DownloadSettingsView: View {
         ScrollView {
             Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 12) {
                 GridRow {
-                    Text("合并格式")
+                    Text(viewModel.text(.language))
+                    Picker("", selection: Binding(
+                        get: { viewModel.language },
+                        set: { viewModel.requestLanguageChange($0) }
+                    )) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    }
+                    .frame(width: 180)
+                    .disabled(viewModel.isDownloading)
+                }
+
+                GridRow {
+                    Text(viewModel.text(.mergeFormat))
                     Picker("", selection: $viewModel.mergeFormat) {
                         Text("mp4").tag("mp4")
                         Text("mkv").tag("mkv")
@@ -427,9 +454,9 @@ private struct DownloadSettingsView: View {
                 }
 
                 GridRow {
-                    Text("cookies 来源")
+                    Text(viewModel.text(.cookiesSource))
                     Picker("", selection: $viewModel.cookiesSource) {
-                        Text("不使用").tag("不使用")
+                        Text(viewModel.text(.cookiesNone)).tag("不使用")
                         Text("cookies.txt").tag("cookies.txt")
                         Text("Chrome").tag("Chrome")
                         Text("Safari").tag("Safari")
@@ -439,11 +466,11 @@ private struct DownloadSettingsView: View {
                 }
 
                 GridRow {
-                    Text("cookies 文件")
+                    Text(viewModel.text(.cookiesFile))
                     HStack {
-                        TextField("选择 cookies.txt 时使用；Chrome/Safari 会自动读取浏览器登录态", text: $viewModel.cookiesPath)
+                        TextField(viewModel.text(.cookiesFilePlaceholder), text: $viewModel.cookiesPath)
                             .disabled(viewModel.isDownloading || viewModel.cookiesSource != "cookies.txt")
-                        Button("选择") {
+                        Button(viewModel.text(.browse)) {
                             viewModel.chooseCookiesFile()
                         }
                         .disabled(viewModel.isDownloading)
@@ -451,53 +478,53 @@ private struct DownloadSettingsView: View {
                 }
 
                 GridRow {
-                    Text("代理")
-                    TextField("例如 http://127.0.0.1:7897", text: $viewModel.proxyText)
+                    Text(viewModel.text(.proxy))
+                    TextField(viewModel.text(.proxyPlaceholder), text: $viewModel.proxyText)
                         .disabled(viewModel.isDownloading)
                 }
 
                 GridRow {
-                    Text("附加内容")
+                    Text(viewModel.text(.extras))
                     HStack(spacing: 16) {
-                        Toggle("字幕文件", isOn: $viewModel.shouldWriteSubtitles)
-                        Toggle("自动字幕", isOn: $viewModel.shouldWriteAutoSubtitles)
-                        Toggle("封面图片", isOn: $viewModel.shouldWriteThumbnail)
+                        Toggle(viewModel.text(.subtitles), isOn: $viewModel.shouldWriteSubtitles)
+                        Toggle(viewModel.text(.autoSubtitles), isOn: $viewModel.shouldWriteAutoSubtitles)
+                        Toggle(viewModel.text(.thumbnail), isOn: $viewModel.shouldWriteThumbnail)
                     }
                     .disabled(viewModel.isDownloading)
                 }
 
                 GridRow {
-                    Text("字幕语言")
+                    Text(viewModel.text(.subtitleLanguages))
                     TextField("zh-Hans,zh-CN,en", text: $viewModel.subtitleLanguages)
                         .disabled(viewModel.isDownloading)
                 }
 
                 GridRow {
-                    Text("文件冲突")
+                    Text(viewModel.text(.fileConflict))
                     Picker("", selection: $viewModel.conflictPolicy) {
-                        Text("自动改名（推荐）").tag("自动改名（推荐）")
-                        Text("覆盖").tag("覆盖")
-                        Text("跳过").tag("跳过")
+                        Text(viewModel.text(.conflictRename)).tag("自动改名（推荐）")
+                        Text(viewModel.text(.conflictOverwrite)).tag("覆盖")
+                        Text(viewModel.text(.conflictSkip)).tag("跳过")
                     }
                     .frame(width: 200)
                     .disabled(viewModel.isDownloading)
                 }
 
                 GridRow {
-                    Text("限速")
-                    TextField("留空不限速，例如 5M", text: $viewModel.rateLimit)
+                    Text(viewModel.text(.rateLimit))
+                    TextField(viewModel.text(.rateLimitPlaceholder), text: $viewModel.rateLimit)
                         .disabled(viewModel.isDownloading)
                 }
 
                 GridRow {
-                    Text("重试次数")
+                    Text(viewModel.text(.retries))
                     TextField("", text: $viewModel.retryCount)
                         .frame(width: 120)
                         .disabled(viewModel.isDownloading)
                 }
 
                 GridRow {
-                    Text("并发分片数")
+                    Text(viewModel.text(.concurrentFragments))
                     TextField("", text: $viewModel.concurrentFragments)
                         .frame(width: 120)
                         .disabled(viewModel.isDownloading)
@@ -531,24 +558,24 @@ private struct StatusBarView: View {
 
                 Spacer()
 
-                Button("打开目录") {
+                Button(viewModel.text(.openFolder)) {
                     viewModel.openSaveDirectory()
                 }
                 .controlSize(.large)
 
-                Button("打开文件") {
+                Button(viewModel.text(.openFile)) {
                     viewModel.openDownloadedFile()
                 }
                 .controlSize(.large)
                 .disabled(viewModel.lastDownloadedFileURL == nil)
 
-                Button("取消下载") {
+                Button(viewModel.text(.cancel)) {
                     viewModel.cancelDownload()
                 }
                 .controlSize(.large)
                 .disabled(!viewModel.canCancelDownload)
 
-                Button(viewModel.isDownloading ? "下载中..." : "开始下载") {
+                Button(viewModel.isDownloading ? viewModel.text(.downloading) : viewModel.text(.startDownload)) {
                     Task {
                         await viewModel.startDownload()
                     }
@@ -566,14 +593,14 @@ private struct LogPanelView: View {
     @ObservedObject var viewModel: MainViewModel
 
     var body: some View {
-        GroupBox("日志") {
+        GroupBox(viewModel.text(.log)) {
             VStack(alignment: .trailing, spacing: 8) {
                 HStack {
                     Spacer()
-                    Button("复制日志") {
+                    Button(viewModel.text(.copyLog)) {
                         viewModel.copyLog()
                     }
-                    Button("清空") {
+                    Button(viewModel.text(.clear)) {
                         viewModel.clearLog()
                     }
                 }

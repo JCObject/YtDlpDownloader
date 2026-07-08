@@ -4,6 +4,9 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using YtDlpDownloader.Infrastructure;
 using YtDlpDownloader.Models;
@@ -50,11 +53,12 @@ public sealed class PrimaryViewModel : ObservableObject
     private bool _downloadAutoSubtitles;
     private string _subtitleLanguages = "zh-Hans,zh-CN,en";
     private bool _downloadThumbnail;
-    private FileConflictPolicyOption _selectedFileConflictPolicy = FileConflictPolicyOption.Rename;
+    private FileConflictPolicyOption _selectedFileConflictPolicy = new("rename", "自动改名（推荐）");
     private string _rateLimit = "";
     private int _retryCount = 10;
     private int _concurrentFragments = 5;
     private string _extraArgumentsText = "";
+    private LanguageOption _selectedLanguageOption = LanguageOption.English;
 
     public PrimaryViewModel()
     {
@@ -63,6 +67,18 @@ public sealed class PrimaryViewModel : ObservableObject
         _userSettingsService = new UserSettingsService();
         var settingsService = new SettingsService(_toolPathService);
         var userSettings = _userSettingsService.Load();
+        LanguageOptions =
+        [
+            LanguageOption.Chinese,
+            LanguageOption.English
+        ];
+        _selectedLanguageOption = LanguageOption.FromValue(userSettings.Language);
+        Text = new LocalizationService(_selectedLanguageOption.Value);
+        _status = Text["StatusEnterUrl"];
+        _stage = Text["StageWaitingLink"];
+        _title = Text["TitleNotParsed"];
+        _optionsHint = Text["OptionsHintInitial"];
+        _primaryActionSummary = Text["ActionInitial"];
 
         _ytDlpService = new YtDlpService(processRunner, _toolPathService);
         _downloadService = new DownloadService(processRunner, _toolPathService);
@@ -78,20 +94,20 @@ public sealed class PrimaryViewModel : ObservableObject
         _downloadAutoSubtitles = userSettings.DownloadAutoSubtitles;
         _subtitleLanguages = userSettings.SubtitleLanguages;
         _downloadThumbnail = userSettings.DownloadThumbnail;
-        _selectedFileConflictPolicy = FileConflictPolicyOption.FromValue(userSettings.FileConflictPolicy);
+        _selectedFileConflictPolicy = FileConflictPolicyOption.FromValue(userSettings.FileConflictPolicy, Text);
         _rateLimit = userSettings.RateLimit;
         _retryCount = userSettings.RetryCount;
         _concurrentFragments = Math.Clamp(userSettings.ConcurrentFragments, 1, 16);
         _extraArgumentsText = userSettings.ExtraArgumentsText;
-        _componentStatus = _toolPathService.GetComponentSummary();
+        _componentStatus = GetLocalizedComponentSummary();
 
         MergeOutputFormats = ["mp4", "mkv", "auto"];
         CookieSources = ["不使用", "Chrome", "Edge", "cookies.txt"];
         FileConflictPolicies =
         [
-            FileConflictPolicyOption.Rename,
-            new("skip", "跳过已有文件"),
-            new("overwrite", "覆盖已有文件")
+            FileConflictPolicyOption.Rename(Text),
+            new("skip", Text["FileConflictSkip"]),
+            new("overwrite", Text["FileConflictOverwrite"])
         ];
 
         AnalyzeCommand = new AsyncRelayCommand(AnalyzeAsync, CanAnalyze);
@@ -107,10 +123,11 @@ public sealed class PrimaryViewModel : ObservableObject
         RepairComponentsCommand = new AsyncRelayCommand(RepairComponentsAsync, CanRepairComponents);
         UpdateCoreCommand = new AsyncRelayCommand(UpdateCoreAsync, CanRepairComponents);
 
-        AddLog(_toolPathService.GetToolStatus());
+        AddLog(GetLocalizedToolStatus());
         UpdateActionSummary();
     }
 
+    public LocalizationService Text { get; }
     public string Url { get => _url; set { if (SetProperty(ref _url, value)) { UpdateActionSummary(); RaiseCommandStates(); } } }
     public string SaveDirectory { get => _saveDirectory; set { if (SetProperty(ref _saveDirectory, value)) { SaveSettings(); UpdateActionSummary(); RaiseCommandStates(); } } }
     public string OutputFileName { get => _outputFileName; set { if (SetProperty(ref _outputFileName, value)) { UpdateActionSummary(); RaiseCommandStates(); } } }
@@ -170,7 +187,7 @@ public sealed class PrimaryViewModel : ObservableObject
     }
 
     public bool CanEditInputs => !IsDownloading && !IsRepairingComponents;
-    public string AnalyzeButtonText => IsAnalyzing ? "解析中..." : "解析";
+    public string AnalyzeButtonText => IsAnalyzing ? Text["ButtonAnalyzing"] : Text["ButtonAnalyze"];
     public int SelectedTabIndex { get => _selectedTabIndex; set { if (SetProperty(ref _selectedTabIndex, value)) { UpdateActionSummary(); RaiseCommandStates(); } } }
     public MediaFormat? SelectedSimpleFormat { get => _selectedSimpleFormat; set { if (SetProperty(ref _selectedSimpleFormat, value)) { UpdateActionSummary(); RaiseCommandStates(); } } }
     public MediaFormat? SelectedAdvancedFormat { get => _selectedAdvancedFormat; set { if (SetProperty(ref _selectedAdvancedFormat, value)) { UpdateActionSummary(); RaiseCommandStates(); } } }
@@ -187,12 +204,40 @@ public sealed class PrimaryViewModel : ObservableObject
     public int RetryCount { get => _retryCount; set { if (SetProperty(ref _retryCount, Math.Max(0, value))) SaveSettings(); } }
     public int ConcurrentFragments { get => _concurrentFragments; set { if (SetProperty(ref _concurrentFragments, Math.Clamp(value, 1, 16))) SaveSettings(); } }
     public string ExtraArgumentsText { get => _extraArgumentsText; set { if (SetProperty(ref _extraArgumentsText, value)) SaveSettings(); } }
+    public LanguageOption SelectedLanguageOption
+    {
+        get => _selectedLanguageOption;
+        set
+        {
+            var previous = _selectedLanguageOption;
+            if (value == previous)
+            {
+                return;
+            }
+
+            if (!ConfirmRestartForLanguageChange())
+            {
+                SetProperty(ref _selectedLanguageOption, value);
+                Application.Current.Dispatcher.BeginInvoke(
+                    () => SetProperty(ref _selectedLanguageOption, previous),
+                    DispatcherPriority.ApplicationIdle);
+                return;
+            }
+
+            if (SetProperty(ref _selectedLanguageOption, value))
+            {
+                SaveSettings();
+                RestartApplication();
+            }
+        }
+    }
 
     public ObservableCollection<MediaFormat> SimpleFormats { get; } = [];
     public ObservableCollection<MediaFormat> AdvancedFormats { get; } = [];
     public ObservableCollection<string> MergeOutputFormats { get; }
     public ObservableCollection<string> CookieSources { get; }
     public ObservableCollection<FileConflictPolicyOption> FileConflictPolicies { get; }
+    public ObservableCollection<LanguageOption> LanguageOptions { get; }
     public DownloadTaskViewModel CurrentTask { get; } = new();
 
     public AsyncRelayCommand AnalyzeCommand { get; }
@@ -215,9 +260,9 @@ public sealed class PrimaryViewModel : ObservableObject
         if (!TryValidateUrl(Url, out var normalizedUrl, out var validationMessage))
         {
             ClearParsedVideo();
-            Stage = "链接有误";
+            Stage = Text["StageInvalidLink"];
             Status = validationMessage;
-            OptionsHint = "请粘贴完整的视频网址，然后再点击解析。";
+            OptionsHint = Text["OptionsHintInvalidLink"];
             AddLog(validationMessage);
             return;
         }
@@ -226,12 +271,12 @@ public sealed class PrimaryViewModel : ObservableObject
         {
             IsBusy = true;
             IsAnalyzing = true;
-            Stage = "解析中";
-            Status = "正在获取视频信息，请稍候...";
-            OptionsHint = "正在读取标题、封面和可下载格式...";
+            Stage = Text["StageAnalyzing"];
+            Status = Text["StatusAnalyzing"];
+            OptionsHint = Text["OptionsHintAnalyzing"];
             ClearLog();
             RefreshComponents();
-            AddLog(_toolPathService.GetToolStatus());
+            AddLog(GetLocalizedToolStatus());
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(90));
@@ -244,7 +289,7 @@ public sealed class PrimaryViewModel : ObservableObject
                 timeout.Token);
             Title = videoInfo.Title;
             Author = videoInfo.Author;
-            Duration = videoInfo.Duration is null ? "未知时长" : videoInfo.Duration.Value.ToString(@"hh\:mm\:ss");
+            Duration = videoInfo.Duration is null ? Text["DurationUnknown"] : videoInfo.Duration.Value.ToString(@"hh\:mm\:ss");
             ThumbnailUrl = videoInfo.ThumbnailUrl;
             SourceUrl = videoInfo.SourceUrl;
             OutputFileName = SanitizeFileName(videoInfo.Title);
@@ -253,23 +298,24 @@ public sealed class PrimaryViewModel : ObservableObject
             AdvancedFormats.Clear();
             foreach (var format in videoInfo.Formats)
             {
-                if (format.IsSimpleOption) SimpleFormats.Add(format);
-                else AdvancedFormats.Add(format);
+                var localizedFormat = LocalizeFormat(format);
+                if (localizedFormat.IsSimpleOption) SimpleFormats.Add(localizedFormat);
+                else AdvancedFormats.Add(localizedFormat);
             }
 
             SelectedSimpleFormat = SimpleFormats.FirstOrDefault(format => format.FormatId == "recommended-best") ?? SimpleFormats.FirstOrDefault();
             SelectedAdvancedFormat = AdvancedFormats.FirstOrDefault();
-            Stage = "已解析";
-            Status = "请选择清晰度，然后点击开始下载";
-            OptionsHint = "高级格式适合了解 format_id 的用户；普通下载建议使用简单下载。需合并表示该格式只有视频轨，会自动和音频合并。";
+            Stage = Text["StageAnalyzed"];
+            Status = Text["StatusChooseQuality"];
+            OptionsHint = Text["OptionsHintAdvanced"];
             UpdateActionSummary();
         }
         catch (Exception ex)
         {
             ClearParsedVideo();
-            Stage = "解析失败";
+            Stage = Text["StageParseFailed"];
             Status = ToUserFacingParseStatus(ex);
-            OptionsHint = "没有获取到视频信息。可以换一个链接，或稍后重试。";
+            OptionsHint = Text["OptionsHintParseFailed"];
             AddLog(ToFriendlyError(ex));
         }
         finally
@@ -284,15 +330,15 @@ public sealed class PrimaryViewModel : ObservableObject
         var selectedFormat = SelectedFormat;
         if (selectedFormat is null)
         {
-            Status = "请先选择下载选项";
+            Status = Text["StatusSelectDownloadOption"];
             return;
         }
 
         if (!_toolPathService.HasFfmpeg)
         {
-            Stage = "缺少组件";
-            Status = "缺少 ffmpeg，无法完成视频合并";
-            AddLog("ffmpeg 是必备组件。请把 ffmpeg.exe 放到 tools 目录后重试。");
+            Stage = Text["StageMissingComponent"];
+            Status = Text["StatusMissingFfmpeg"];
+            AddLog(Text["LogMissingFfmpeg"]);
             return;
         }
 
@@ -303,9 +349,9 @@ public sealed class PrimaryViewModel : ObservableObject
             _downloadCancellation = new CancellationTokenSource();
             Directory.CreateDirectory(SaveDirectory);
             CurrentTask.Progress = 0;
-            CurrentTask.Stage = "准备下载";
-            Stage = "下载中";
-            Status = "正在下载，请保持窗口打开";
+            CurrentTask.Stage = Text["TaskPreparing"];
+            Stage = Text["StageDownloading"];
+            Status = Text["StatusDownloading"];
             SaveSettings();
 
             var safeName = SanitizeFileName(OutputFileName);
@@ -330,21 +376,21 @@ public sealed class PrimaryViewModel : ObservableObject
             await _downloadService.DownloadAsync(task, ApplyProgress, _downloadCancellation.Token);
             _lastOutputFile = FindLatestOutputFile(SaveDirectory, safeName, startedAt);
             CurrentTask.Progress = 100;
-            CurrentTask.Stage = "完成";
-            Stage = "下载完成";
-            Status = "下载完成，可以打开文件或所在目录";
-            AddLog(_lastOutputFile is null ? "下载完成，但未能自动定位最终文件。" : $"已保存: {_lastOutputFile}");
+            CurrentTask.Stage = Text["TaskComplete"];
+            Stage = Text["StageDownloadComplete"];
+            Status = Text["StatusDownloadComplete"];
+            AddLog(_lastOutputFile is null ? Text["LogCompleteNoFile"] : string.Format(Text["LogSaved"], _lastOutputFile));
         }
         catch (OperationCanceledException)
         {
-            Stage = "已取消";
-            Status = "下载已取消";
-            AddLog("下载已取消。");
+            Stage = Text["StageCanceled"];
+            Status = Text["StatusCanceled"];
+            AddLog(Text["LogCanceled"]);
         }
         catch (Exception ex)
         {
-            Stage = "下载失败";
-            Status = "下载失败，详情见日志";
+            Stage = Text["StageDownloadFailed"];
+            Status = Text["StatusDownloadFailed"];
             AddLog(ToFriendlyError(ex));
         }
         finally
@@ -361,7 +407,7 @@ public sealed class PrimaryViewModel : ObservableObject
     private void CancelDownload()
     {
         _downloadCancellation?.Cancel();
-        Status = "正在取消下载...";
+        Status = Text["StatusCanceling"];
     }
 
     private DownloadOptions BuildOptions()
@@ -388,6 +434,7 @@ public sealed class PrimaryViewModel : ObservableObject
     {
         _userSettingsService.Save(new UserDownloadSettings
         {
+            Language = SelectedLanguageOption.Value,
             SaveDirectory = SaveDirectory,
             MergeOutputFormat = MergeOutputFormat,
             CookiesSource = CookiesSource,
@@ -411,13 +458,98 @@ public sealed class PrimaryViewModel : ObservableObject
         if (selected is null)
         {
             PrimaryActionSummary = string.IsNullOrWhiteSpace(Url)
-                ? "第 1 步：粘贴视频链接并点击解析。"
-                : "第 2 步：解析后选择一个下载选项。";
+                ? Text["ActionStepPaste"]
+                : Text["ActionStepChoose"];
             return;
         }
 
-        var merge = selected.RequiresFfmpeg ? $"，合并为 {MergeOutputFormat}" : "";
-        PrimaryActionSummary = $"将下载：{selected.DisplayName}{merge}，保存到 {SaveDirectory}";
+        var merge = selected.RequiresFfmpeg ? string.Format(Text["ActionMergeAs"], MergeOutputFormat) : "";
+        PrimaryActionSummary = string.Format(Text["ActionWillDownload"], selected.DisplayName, merge, SaveDirectory);
+    }
+
+    private MediaFormat LocalizeFormat(MediaFormat format)
+    {
+        var extension = LocalizeFormatToken(format.Extension);
+        var videoCodec = LocalizeFormatToken(format.VideoCodec);
+        var audioCodec = LocalizeFormatToken(format.AudioCodec);
+        var resolution = LocalizeResolution(format.Resolution);
+        var displayName = LocalizeDisplayName(format, extension, resolution);
+
+        return new MediaFormat
+        {
+            FormatId = format.FormatId,
+            DisplayName = displayName,
+            FormatSelector = format.FormatSelector,
+            Extension = extension,
+            VideoCodec = videoCodec,
+            AudioCodec = audioCodec,
+            Resolution = resolution,
+            Fps = format.Fps,
+            FileSizeBytes = format.FileSizeBytes,
+            IsRecommended = format.IsRecommended,
+            IsAudioOnly = format.IsAudioOnly,
+            RequiresFfmpeg = format.RequiresFfmpeg,
+            IsSimpleOption = format.IsSimpleOption,
+            KindLabel = format.IsAudioOnly ? Text["FormatAudio"] : format.RequiresFfmpeg ? Text["FormatNeedsMerge"] : Text["FormatSingleFile"],
+            UnknownText = Text["FormatUnknown"]
+        };
+    }
+
+    private string LocalizeDisplayName(MediaFormat format, string extension, string resolution)
+    {
+        return format.FormatId switch
+        {
+            "recommended-best" => Text["FormatBest"],
+            "recommended-single-mp4" => Text["FormatSingleMp4"],
+            "recommended-audio" => Text["FormatAudioOnly"],
+            "recommended-1080p" => "1080p",
+            "recommended-720p" => "720p",
+            _ when format.IsAudioOnly => $"{Text["FormatAudio"]} {format.FormatId} ({extension})",
+            _ => $"{resolution} {format.FormatId} ({extension})"
+        };
+    }
+
+    private string LocalizeResolution(string value)
+    {
+        var normalized = NormalizeChineseToken(value);
+        return normalized switch
+        {
+            "auto" => Text["FormatAuto"],
+            "unknown" => Text["FormatUnknown"],
+            "audio" => Text["FormatAudio"],
+            "best" => Text["FormatBestAvailable"],
+            "1080p-or-lower" => string.Format(Text["FormatOrLower"], "1080p"),
+            "720p-or-lower" => string.Format(Text["FormatOrLower"], "720p"),
+            _ => value
+        };
+    }
+
+    private string LocalizeFormatToken(string value)
+    {
+        var normalized = NormalizeChineseToken(value);
+        return normalized switch
+        {
+            "auto" => Text["FormatAuto"],
+            "unknown" => Text["FormatUnknown"],
+            "audio" => Text["FormatAudio"],
+            "best-audio" => Text["FormatBestAudio"],
+            _ => value
+        };
+    }
+
+    private static string NormalizeChineseToken(string value)
+    {
+        return value switch
+        {
+            "自动" or "鑷姩" => "auto",
+            "未知" or "鏈煡" => "unknown",
+            "音频" or "闊抽" => "audio",
+            "最高可用" or "鏈€楂樺彲鐢?" => "best",
+            "最佳音频" or "鏈€浣抽煶棰?" => "best-audio",
+            "1080p 或以下" or "1080p 鎴栦互涓?" => "1080p-or-lower",
+            "720p 或以下" or "720p 鎴栦互涓?" => "720p-or-lower",
+            _ => value
+        };
     }
 
     private void BrowseDirectory()
@@ -469,7 +601,7 @@ public sealed class PrimaryViewModel : ObservableObject
 
     private void ClearParsedVideo()
     {
-        Title = "尚未解析视频";
+        Title = Text["TitleNotParsed"];
         Author = "";
         Duration = "";
         ThumbnailUrl = "";
@@ -485,7 +617,7 @@ public sealed class PrimaryViewModel : ObservableObject
         RaiseCommandStates();
     }
 
-    private void RefreshComponents() => ComponentStatus = _toolPathService.GetComponentSummary();
+    private void RefreshComponents() => ComponentStatus = GetLocalizedComponentSummary();
 
     private void RefreshComponentsWithFeedback()
     {
@@ -493,7 +625,120 @@ public sealed class PrimaryViewModel : ObservableObject
         Stage = "组件检查";
         Status = "已重新检查组件状态";
         AddLog("已重新检查组件状态。");
-        AddLog(_toolPathService.GetToolStatus());
+        AddLog(GetLocalizedToolStatus());
+    }
+
+    private string GetLocalizedToolStatus()
+    {
+        var ytDlp = File.Exists(_toolPathService.YtDlpPath)
+            ? _toolPathService.YtDlpPath
+            : _toolPathService.HasYtDlp
+                ? Text["ToolSystemPathYtDlp"]
+                : Text["ToolMissing"];
+        var ffmpeg = _toolPathService.FfmpegPath is not null && File.Exists(_toolPathService.FfmpegPath)
+            ? _toolPathService.FfmpegPath
+            : _toolPathService.HasFfmpeg
+                ? Text["ToolSystemPathFfmpeg"]
+                : Text["ToolMissing"];
+        var jsRuntime = _toolPathService.JsRuntimePath ?? Text["ToolMissing"];
+
+        return $"{Text["ToolYtDlp"]}: {ytDlp}\n{Text["ToolFfmpeg"]}: {ffmpeg}\n{Text["ToolJsRuntime"]}: {jsRuntime}";
+    }
+
+    private string GetLocalizedComponentSummary()
+    {
+        var ytDlp = _toolPathService.HasYtDlp ? Text["ToolNormal"] : Text["ToolMissing"];
+        var ffmpeg = _toolPathService.HasFfmpeg ? Text["ToolNormal"] : Text["ToolMissing"];
+        var jsRuntime = _toolPathService.JsRuntimePath is null ? Text["ToolRecommended"] : Text["ToolNormal"];
+
+        return $"{Text["ToolYtDlp"]}: {ytDlp}    {Text["ToolFfmpeg"]}: {ffmpeg}    {Text["ToolJsRuntime"]}: {jsRuntime}\n{Text["ComponentHint"]}";
+    }
+
+    private bool ConfirmRestartForLanguageChange()
+    {
+        var dialog = new Window
+        {
+            Title = Text["LanguageRestartTitle"],
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ResizeMode = ResizeMode.NoResize,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            MinWidth = 420,
+            Background = Brushes.White,
+            Content = BuildRestartDialogContent()
+        };
+
+        return dialog.ShowDialog() == true;
+    }
+
+    private UIElement BuildRestartDialogContent()
+    {
+        var root = new Grid { Margin = new Thickness(20) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var message = new TextBlock
+        {
+            Text = Text["LanguageRestartMessage"],
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 15,
+            MaxWidth = 520,
+            Margin = new Thickness(0, 0, 0, 20)
+        };
+        Grid.SetRow(message, 0);
+        root.Children.Add(message);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+
+        var restartButton = new Button
+        {
+            Content = Text["LanguageRestartYes"],
+            MinWidth = 104,
+            Margin = new Thickness(0, 0, 10, 0),
+            IsDefault = true
+        };
+        restartButton.Click += (_, _) => Window.GetWindow(restartButton)!.DialogResult = true;
+
+        var cancelButton = new Button
+        {
+            Content = Text["LanguageRestartNo"],
+            MinWidth = 88,
+            IsCancel = true
+        };
+        cancelButton.Click += (_, _) => Window.GetWindow(cancelButton)!.DialogResult = false;
+
+        buttons.Children.Add(restartButton);
+        buttons.Children.Add(cancelButton);
+        Grid.SetRow(buttons, 1);
+        root.Children.Add(buttons);
+
+        return root;
+    }
+
+    private void RestartApplication()
+    {
+        try
+        {
+            var processPath = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(processPath))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = processPath,
+                    UseShellExecute = true
+                });
+            }
+
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            AddLog(ex.Message);
+        }
     }
 
     private async Task RepairComponentsAsync(CancellationToken cancellationToken)
@@ -509,7 +754,7 @@ public sealed class PrimaryViewModel : ObservableObject
 
             await _componentRepairService.RepairMissingAsync(AddLog, cancellationToken);
             RefreshComponents();
-            AddLog(_toolPathService.GetToolStatus());
+            AddLog(GetLocalizedToolStatus());
             Stage = "组件正常";
             Status = "组件检查完成，可以开始解析视频";
         }
@@ -541,7 +786,7 @@ public sealed class PrimaryViewModel : ObservableObject
 
             await _componentRepairService.UpdateYtDlpAsync(AddLog, cancellationToken);
             RefreshComponents();
-            AddLog(_toolPathService.GetToolStatus());
+            AddLog(GetLocalizedToolStatus());
             Stage = "更新完成";
             Status = "下载核心已更新，可以重新解析视频";
         }
@@ -742,17 +987,33 @@ public sealed class PrimaryViewModel : ObservableObject
 
 public sealed record FileConflictPolicyOption(string Value, string Label)
 {
-    public static FileConflictPolicyOption Rename { get; } = new("rename", "自动改名（推荐）");
     public override string ToString() => Label;
 
-    public static FileConflictPolicyOption FromValue(string value)
+    public static FileConflictPolicyOption Rename(LocalizationService text) => new("rename", text["FileConflictRename"]);
+
+    public static FileConflictPolicyOption FromValue(string value, LocalizationService text)
     {
         return value switch
         {
-            "skip" => new FileConflictPolicyOption("skip", "跳过已有文件"),
-            "overwrite" => new FileConflictPolicyOption("overwrite", "覆盖已有文件"),
-            _ => Rename
+            "skip" => new FileConflictPolicyOption("skip", text["FileConflictSkip"]),
+            "overwrite" => new FileConflictPolicyOption("overwrite", text["FileConflictOverwrite"]),
+            _ => Rename(text)
         };
+    }
+}
+
+public sealed record LanguageOption(string Value, string Label)
+{
+    public static LanguageOption Chinese { get; } = new(LocalizationService.Chinese, "简体中文");
+    public static LanguageOption English { get; } = new(LocalizationService.English, "English");
+
+    public override string ToString() => Label;
+
+    public static LanguageOption FromValue(string? value)
+    {
+        return string.Equals(value, LocalizationService.Chinese, StringComparison.OrdinalIgnoreCase)
+            ? Chinese
+            : English;
     }
 }
 

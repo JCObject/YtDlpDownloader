@@ -59,7 +59,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <TextBlock Grid.Row="0"
-                       Text="1 输入链接  ->  2 选择清晰度  ->  3 开始下载"
+                       Text="{Binding Text[HeaderSteps]}"
                        FontWeight="SemiBold"
                        Foreground="#475569"
                        Margin="0,0,0,8" />
@@ -71,7 +71,7 @@
                 <TextBox Grid.Column="0"
                          IsEnabled="{Binding CanEditInputs}"
                          Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="视频 URL"
+                         ToolTip="{Binding Text[TooltipUrl]}"
                          FontSize="15" />
                 <Button Grid.Column="1"
                         Margin="10,0,0,0"
@@ -89,7 +89,7 @@
 
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <GroupBox Header="视频信息">
+                    <GroupBox Header="{Binding Text[GroupVideoInfo]}">
                         <StackPanel>
                             <Border Height="180"
                                     Background="#E7EBF0"
@@ -109,18 +109,18 @@
                         </StackPanel>
                     </GroupBox>
 
-                    <GroupBox Header="组件状态">
+                    <GroupBox Header="{Binding Text[GroupComponents]}">
                         <StackPanel>
                             <TextBlock Text="{Binding ComponentStatus}" TextWrapping="Wrap" />
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <Button Command="{Binding RefreshComponentsCommand}" Content="刷新" />
-                                <Button Margin="8,0,0,0" Command="{Binding RepairComponentsCommand}" Content="修复缺失" />
-                                <Button Margin="8,0,0,0" Command="{Binding UpdateCoreCommand}" Content="更新核心" />
+                                <Button Command="{Binding RefreshComponentsCommand}" Content="{Binding Text[ButtonRefresh]}" />
+                                <Button Margin="8,0,0,0" Command="{Binding RepairComponentsCommand}" Content="{Binding Text[ButtonRepair]}" />
+                                <Button Margin="8,0,0,0" Command="{Binding UpdateCoreCommand}" Content="{Binding Text[ButtonUpdateCore]}" />
                             </StackPanel>
                         </StackPanel>
                     </GroupBox>
 
-                    <GroupBox Header="保存设置">
+                    <GroupBox Header="{Binding Text[GroupSave]}">
                         <Grid IsEnabled="{Binding CanEditInputs}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -131,10 +131,10 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="72" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="保存目录" />
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="{Binding Text[LabelSaveDirectory]}" />
                             <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SaveDirectory, UpdateSourceTrigger=PropertyChanged}" />
-                            <Button Grid.Row="0" Grid.Column="2" Margin="8,0,0,0" Command="{Binding BrowseDirectoryCommand}" Content="选择" />
-                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="文件名" />
+                            <Button Grid.Row="0" Grid.Column="2" Margin="8,0,0,0" Command="{Binding BrowseDirectoryCommand}" Content="{Binding Text[ButtonBrowse]}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[LabelFileName]}" />
                             <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding OutputFileName, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
                     </GroupBox>
@@ -148,33 +148,33 @@
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="{Binding OptionsHint}" Foreground="#475569" TextWrapping="Wrap" Margin="0,0,0,8" />
                 <TabControl Grid.Row="1" IsEnabled="{Binding CanEditInputs}" SelectedIndex="{Binding SelectedTabIndex}">
-                    <TabItem Header="简单下载">
+                    <TabItem Header="{Binding Text[TabSimple]}">
                         <DataGrid Margin="8" ItemsSource="{Binding SimpleFormats}" SelectedItem="{Binding SelectedSimpleFormat}" SelectionMode="Single">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="选项" Binding="{Binding DisplayName}" Width="180" />
-                                <DataGridTextColumn Header="类型" Binding="{Binding Kind}" Width="80" />
-                                <DataGridTextColumn Header="清晰度" Binding="{Binding Resolution}" Width="110" />
-                                <DataGridTextColumn Header="格式" Binding="{Binding Extension}" Width="80" />
-                                <DataGridTextColumn Header="说明" Binding="{Binding Summary}" Width="*" />
+                                <DataGridTextColumn x:Name="SimpleOptionColumn" Header="选项" Binding="{Binding DisplayName}" Width="180" />
+                                <DataGridTextColumn x:Name="SimpleKindColumn" Header="类型" Binding="{Binding Kind}" Width="80" />
+                                <DataGridTextColumn x:Name="SimpleResolutionColumn" Header="清晰度" Binding="{Binding Resolution}" Width="110" />
+                                <DataGridTextColumn x:Name="SimpleFormatColumn" Header="格式" Binding="{Binding Extension}" Width="80" />
+                                <DataGridTextColumn x:Name="SimpleSummaryColumn" Header="说明" Binding="{Binding Summary}" Width="*" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </TabItem>
-                    <TabItem Header="高级格式">
+                    <TabItem Header="{Binding Text[TabAdvanced]}">
                         <DataGrid Margin="8" ItemsSource="{Binding AdvancedFormats}" SelectedItem="{Binding SelectedAdvancedFormat}" SelectionMode="Single">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="format_id" Binding="{Binding FormatId}" Width="90" />
-                                <DataGridTextColumn Header="清晰度" Binding="{Binding Resolution}" Width="105" />
-                                <DataGridTextColumn Header="类型" Binding="{Binding Kind}" Width="78" />
-                                <DataGridTextColumn Header="格式" Binding="{Binding Extension}" Width="70" />
-                                <DataGridTextColumn Header="视频编码" Binding="{Binding VideoCodec}" Width="150" />
-                                <DataGridTextColumn Header="音频编码" Binding="{Binding AudioCodec}" Width="140" />
+                                <DataGridTextColumn x:Name="AdvancedResolutionColumn" Header="清晰度" Binding="{Binding Resolution}" Width="105" />
+                                <DataGridTextColumn x:Name="AdvancedKindColumn" Header="类型" Binding="{Binding Kind}" Width="78" />
+                                <DataGridTextColumn x:Name="AdvancedFormatColumn" Header="格式" Binding="{Binding Extension}" Width="70" />
+                                <DataGridTextColumn x:Name="AdvancedVideoCodecColumn" Header="视频编码" Binding="{Binding VideoCodec}" Width="150" />
+                                <DataGridTextColumn x:Name="AdvancedAudioCodecColumn" Header="音频编码" Binding="{Binding AudioCodec}" Width="140" />
                                 <DataGridTextColumn Header="FPS" Binding="{Binding Fps}" Width="60" />
-                                <DataGridTextColumn Header="大小" Binding="{Binding FileSizeText}" Width="85" />
-                                <DataGridTextColumn Header="表达式" Binding="{Binding FormatSelector}" Width="220" />
+                                <DataGridTextColumn x:Name="AdvancedSizeColumn" Header="大小" Binding="{Binding FileSizeText}" Width="85" />
+                                <DataGridTextColumn x:Name="AdvancedExpressionColumn" Header="表达式" Binding="{Binding FormatSelector}" Width="220" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </TabItem>
-                    <TabItem Header="下载设置">
+                    <TabItem Header="{Binding Text[TabSettings]}">
                         <ScrollViewer Margin="8" VerticalScrollBarVisibility="Auto">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -194,34 +194,37 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="合并格式" />
-                                <ComboBox Grid.Row="0" Grid.Column="1" Width="160" HorizontalAlignment="Left" ItemsSource="{Binding MergeOutputFormats}" SelectedItem="{Binding MergeOutputFormat}" ToolTip="mp4 兼容性最好；mkv 更包容；auto 交给 yt-dlp 决定。" />
-                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="cookies 来源" />
-                                <ComboBox Grid.Row="1" Grid.Column="1" Width="180" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding CookieSources}" SelectedItem="{Binding CookiesSource}" ToolTip="B站 412、YouTube 登录验证时，推荐先选择 Chrome 或 Edge。浏览器读取失败时再选择 cookies.txt 文件。" />
-                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="cookies 文件" />
-                                <TextBox Grid.Row="2" Grid.Column="1" Margin="0,8,0,0" Text="{Binding CookiesPath, UpdateSourceTrigger=PropertyChanged}" ToolTip="仅 cookies 来源选择 cookies.txt 时使用。可用 Get cookies.txt LOCALLY 从浏览器导出。" />
-                                <Button Grid.Row="2" Grid.Column="2" Margin="8,8,0,0" Command="{Binding BrowseCookiesCommand}" Content="选择" />
-                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="代理" />
-                                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding Proxy, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 http://127.0.0.1:7890；能直接访问视频网站就留空。" />
-                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,10,0,0" Text="附加内容" />
-                                <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
-                                    <CheckBox IsChecked="{Binding DownloadSubtitles}" Content="字幕文件" VerticalAlignment="Center" ToolTip="下载作者上传的字幕，通常会生成额外字幕文件。" />
-                                    <CheckBox IsChecked="{Binding DownloadAutoSubtitles}" Content="自动字幕" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="下载自动生成字幕，可能会生成额外字幕文件。" />
-                                    <CheckBox IsChecked="{Binding DownloadThumbnail}" Content="封面图片" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="额外下载视频封面图片。" />
+                                <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="{Binding Text[SettingsLanguage]}" />
+                                <ComboBox Grid.Row="0" Grid.Column="1" Width="160" HorizontalAlignment="Left" ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguageOption}" ToolTip="{Binding Text[TooltipLanguage]}" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsMergeFormat]}" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" Width="160" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding MergeOutputFormats}" SelectedItem="{Binding MergeOutputFormat}" ToolTip="{Binding Text[TooltipMergeFormat]}" />
+                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsCookiesSource]}" />
+                                <ComboBox Grid.Row="2" Grid.Column="1" Width="180" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding CookieSources}" SelectedItem="{Binding CookiesSource}" ToolTip="{Binding Text[TooltipCookiesSource]}" />
+                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsCookiesFile]}" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Margin="0,8,0,0" Text="{Binding CookiesPath, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Text[TooltipCookiesFile]}" />
+                                <Button Grid.Row="3" Grid.Column="2" Margin="8,8,0,0" Command="{Binding BrowseCookiesCommand}" Content="{Binding Text[ButtonBrowse]}" />
+                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsProxy]}" />
+                                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding Proxy, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Text[TooltipProxy]}" />
+                                <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,10,0,0" Text="{Binding Text[SettingsExtras]}" />
+                                <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
+                                    <CheckBox IsChecked="{Binding DownloadSubtitles}" Content="{Binding Text[SettingsSubtitleFile]}" VerticalAlignment="Center" ToolTip="{Binding Text[TooltipSubtitleFile]}" />
+                                    <CheckBox IsChecked="{Binding DownloadAutoSubtitles}" Content="{Binding Text[SettingsAutoSubtitle]}" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="{Binding Text[TooltipAutoSubtitle]}" />
+                                    <CheckBox IsChecked="{Binding DownloadThumbnail}" Content="{Binding Text[SettingsThumbnail]}" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="{Binding Text[TooltipThumbnail]}" />
                                 </StackPanel>
-                                <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="字幕语言" />
-                                <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding SubtitleLanguages, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 zh-Hans,zh-CN,en；填 all 表示所有字幕。" />
-                                <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="文件冲突" />
-                                <ComboBox Grid.Row="6" Grid.Column="1" Width="180" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding FileConflictPolicies}" SelectedItem="{Binding SelectedFileConflictPolicy}" ToolTip="推荐自动改名，避免覆盖已有文件。" />
-                                <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="限速" />
-                                <TextBox Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding RateLimit, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 2M、500K；留空表示不限速。" />
-                                <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="重试次数" />
-                                <TextBox Grid.Row="8" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding RetryCount, UpdateSourceTrigger=PropertyChanged}" ToolTip="网络失败时自动重试次数。" />
-                                <TextBlock Grid.Row="9" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="并发分片数" />
-                                <TextBox Grid.Row="9" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding ConcurrentFragments, UpdateSourceTrigger=PropertyChanged}" ToolTip="默认 5。提高部分分片视频速度；网络不稳定时调低，范围 1-16。" />
-                                <TextBlock Grid.Row="10" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Top" Text="高级参数" />
-                                <TextBox Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" MinHeight="72" Margin="0,8,0,0" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Text="{Binding ExtraArgumentsText, UpdateSourceTrigger=PropertyChanged}" ToolTip="手动追加 yt-dlp 参数。普通用户建议留空。" />
+                                <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsSubtitleLanguages]}" />
+                                <TextBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding SubtitleLanguages, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Text[TooltipSubtitleLanguages]}" />
+                                <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsFileConflict]}" />
+                                <ComboBox Grid.Row="7" Grid.Column="1" Width="180" HorizontalAlignment="Left" Margin="0,8,0,0" ItemsSource="{Binding FileConflictPolicies}" SelectedItem="{Binding SelectedFileConflictPolicy}" ToolTip="{Binding Text[TooltipFileConflict]}" />
+                                <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsRateLimit]}" />
+                                <TextBox Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Text="{Binding RateLimit, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Text[TooltipRateLimit]}" />
+                                <TextBlock Grid.Row="9" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsRetryCount]}" />
+                                <TextBox Grid.Row="9" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding RetryCount, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Text[TooltipRetryCount]}" />
+                                <TextBlock Grid.Row="10" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding Text[SettingsConcurrentFragments]}" />
+                                <TextBox Grid.Row="10" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,8,0,0" Text="{Binding ConcurrentFragments, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Text[TooltipConcurrentFragments]}" />
+                                <TextBlock Grid.Row="11" Grid.Column="0" Margin="0,8,0,0" VerticalAlignment="Top" Text="{Binding Text[SettingsExtraArgs]}" />
+                                <TextBox Grid.Row="11" Grid.Column="1" Grid.ColumnSpan="2" MinHeight="72" Margin="0,8,0,0" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Text="{Binding ExtraArgumentsText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Text[TooltipExtraArgs]}" />
                             </Grid>
                         </ScrollViewer>
                     </TabItem>
@@ -245,22 +248,22 @@
                     <TextBlock Text="{Binding PrimaryActionSummary}" Foreground="#64748B" TextTrimming="CharacterEllipsis" />
                     <ProgressBar Height="14" Minimum="0" Maximum="100" Value="{Binding CurrentTask.Progress}" Margin="0,8,0,0" />
                 </StackPanel>
-                <Button Grid.Column="2" Command="{Binding OpenFolderCommand}" Content="打开目录" Margin="8,0,0,0" />
-                <Button Grid.Column="3" Command="{Binding OpenFileCommand}" Content="打开文件" Margin="8,0,0,0" />
-                <Button Grid.Column="4" Command="{Binding CancelDownloadCommand}" Content="取消下载" Margin="8,0,0,0" />
-                <Button Grid.Column="5" Command="{Binding DownloadCommand}" Content="开始下载" Margin="8,0,0,0" />
+                <Button Grid.Column="2" Command="{Binding OpenFolderCommand}" Content="{Binding Text[ButtonOpenFolder]}" Margin="8,0,0,0" />
+                <Button Grid.Column="3" Command="{Binding OpenFileCommand}" Content="{Binding Text[ButtonOpenFile]}" Margin="8,0,0,0" />
+                <Button Grid.Column="4" Command="{Binding CancelDownloadCommand}" Content="{Binding Text[ButtonCancelDownload]}" Margin="8,0,0,0" />
+                <Button Grid.Column="5" Command="{Binding DownloadCommand}" Content="{Binding Text[ButtonStartDownload]}" Margin="8,0,0,0" />
             </Grid>
         </Border>
 
-        <GroupBox Grid.Row="3" Header="日志" Margin="0,12,0,0">
+        <GroupBox Grid.Row="3" Header="{Binding Text[GroupLog]}" Margin="0,12,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,6">
-                    <Button Command="{Binding CopyLogCommand}" Content="复制日志" />
-                    <Button Command="{Binding ClearLogCommand}" Content="清空" Margin="8,0,0,0" />
+                    <Button Command="{Binding CopyLogCommand}" Content="{Binding Text[ButtonCopyLog]}" />
+                    <Button Command="{Binding ClearLogCommand}" Content="{Binding Text[ButtonClear]}" Margin="8,0,0,0" />
                 </StackPanel>
                 <TextBox x:Name="LogBox"
                          Grid.Row="1"
